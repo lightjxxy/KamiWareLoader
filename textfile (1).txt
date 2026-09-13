@@ -1,0 +1,180 @@
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
+
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
+-- Send notification function
+local function sendNotification()
+    task.spawn(function()
+        local success = false
+        while not success do
+            success = pcall(function()
+                StarterGui:SetCore("SendNotification", {
+                    Title = "Notice",
+                    Text = "modified by l1ght is light",
+                    Duration = 5
+                })
+            end)
+            if not success then
+                task.wait(0.5)
+            end
+        end
+    end)
+end
+
+sendNotification()
+
+-- Clear existing lighting children and configure custom lighting
+for _, child in ipairs(Lighting:GetChildren()) do
+    child:Destroy()
+end
+
+Lighting.Brightness = 1
+Lighting.EnvironmentDiffuseScale = 0.5
+Lighting.EnvironmentSpecularScale = 0.5
+Lighting.ShadowSoftness = 0.2
+Lighting.ClockTime = 23
+Lighting.GeographicLatitude = 24
+Lighting.ExposureCompensation = 0.1
+Lighting.Ambient = Color3.fromRGB(66, 62, 58)
+Lighting.OutdoorAmbient = Color3.fromRGB(69, 73, 80)
+
+-- Add custom Atmosphere
+local atmosphere = Instance.new("Atmosphere")
+atmosphere.Name = "Atmosphere"
+atmosphere.Density = 0.5
+atmosphere.Offset = 0.5
+atmosphere.Color = Color3.fromRGB(166, 186, 199)
+atmosphere.Decay = Color3.fromRGB(153, 166, 177)
+atmosphere.Glare = 0
+atmosphere.Haze = 1
+atmosphere:SetAttribute("Local", true)
+atmosphere.Parent = Lighting
+
+-- Add custom Sky
+local sky = Instance.new("Sky")
+sky.Name = "Sky"
+sky.SkyboxBk = "http://www.roblox.com/asset/?id=144933338"
+sky.SkyboxDn = "http://www.roblox.com/asset/?id=144931530"
+sky.SkyboxFt = "http://www.roblox.com/asset/?id=144933262"
+sky.SkyboxLf = "http://www.roblox.com/asset/?id=144933244"
+sky.SkyboxRt = "http://www.roblox.com/asset/?id=144933299"
+sky.SkyboxUp = "http://www.roblox.com/asset/?id=144931564"
+sky.MoonAngularSize = 11
+sky.StarCount = 1500
+sky.SunAngularSize = 5
+sky.SunTextureId = "rbxasset://sky/sun.jpg"
+sky.Parent = Lighting
+
+local targetHeight = 5000
+local waitTime = 2
+local assetId = 114683927192692
+local targetCFrame = CFrame.new(15.6611328, 4955, -6.8840332, 1, 0, 0, 0, 1, 0, 0, 0, 0.999999881)
+
+local function teleportHome()
+    if HumanoidRootPart then
+        HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        HumanoidRootPart.CFrame = targetCFrame
+    end
+end
+
+-- Initial position adjustment
+HumanoidRootPart.Anchored = true
+HumanoidRootPart.CFrame = CFrame.new(HumanoidRootPart.Position.X, targetHeight, HumanoidRootPart.Position.Z)
+task.wait(waitTime)
+
+-- Load external asset model
+local function loadExternalAsset()
+    local success, model = pcall(function()
+        return game:GetObjects("rbxassetid://" .. assetId)[1]
+    end)
+    
+    if success and model then
+        model.Parent = Workspace
+        if model:IsA("Model") then
+            if model.PrimaryPart then
+                model:SetPrimaryPartCFrame(targetCFrame * CFrame.new(0, -3, 0))
+            else
+                model:MoveTo(targetCFrame.Position - Vector3.new(0, 3, 0))
+            end
+        end
+        task.wait(0.5)
+        HumanoidRootPart.CFrame = targetCFrame
+        task.wait(0.2)
+        HumanoidRootPart.Anchored = false
+    else
+        HumanoidRootPart.Anchored = false
+    end
+end
+
+loadExternalAsset()
+
+-- Set materials to SmoothPlastic
+local function setSmoothPlastic(parentObj)
+    for _, desc in ipairs(parentObj:GetDescendants()) do
+        if desc:IsA("BasePart") then
+            desc.Material = Enum.Material.SmoothPlastic
+        end
+    end
+end
+
+-- Teleport to random spawn points
+local function teleportToSpawn()
+    local mapModel = Workspace:FindFirstChild("Model") and Workspace.Model:FindFirstChild("Map")
+    if not mapModel then return end
+    
+    local spawnsFolder = mapModel:FindFirstChild("Parts") and mapModel.Parts:FindFirstChild("Spawns")
+    if not spawnsFolder then return end
+
+    local spawnCandidates = {
+        spawnsFolder:GetChildren()[14],
+        spawnsFolder:FindFirstChild("SpawnLocation"),
+        spawnsFolder:GetChildren()[7],
+        spawnsFolder:GetChildren()[2],
+        spawnsFolder:GetChildren()[12],
+        spawnsFolder:GetChildren()[11],
+        spawnsFolder:GetChildren()[10],
+        spawnsFolder:GetChildren()[9],
+        spawnsFolder:GetChildren()[8],
+        spawnsFolder:GetChildren()[13],
+        spawnsFolder:GetChildren()[6],
+        spawnsFolder:GetChildren()[5],
+        spawnsFolder:GetChildren()[4],
+        spawnsFolder:GetChildren()[3]
+    }
+    
+    local validSpawns = {}
+    for _, spv in ipairs(spawnCandidates) do
+        if spv and spv:IsA("BasePart") then
+            table.insert(validSpawns, spv)
+        end
+    end
+
+    if #validSpawns > 0 then
+        local randomSpawn = validSpawns[math.random(1, #validSpawns)]
+        HumanoidRootPart.CFrame = randomSpawn.CFrame + Vector3.new(0, 3, 0)
+    end
+end
+
+local function initializeMap()
+    local mapModel = Workspace:WaitForChild("Model"):WaitForChild("Map")
+    setSmoothPlastic(mapModel)
+    teleportToSpawn()
+end
+
+-- Input bindings for J and K keys
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.J then
+        teleportHome()
+    elseif input.KeyCode == Enum.KeyCode.K then
+        teleportToSpawn()
+    end
+end)
+
+initializeMap()
